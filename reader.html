@@ -1,17 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>QR Scanner</title>
-  <script src="https://unpkg.com/html5-qrcode@2.3.10/minified/html5-qrcode.min.js"></script>
   <style>
     body { font-family: sans-serif; padding: 20px; }
-    #reader { width: 300px; margin-top: 20px; }
-    input, select { display: block; margin: 10px 0; padding: 8px; width: 200px; }
+    input, select, button { display: block; margin: 10px 0; padding: 10px; width: 250px; }
+    video { width: 300px; border: 1px solid #ccc; display: block; margin-top: 20px; }
   </style>
 </head>
 <body>
-  <h2>QR Scanner Autofill</h2>
+  <h2>QR Autofill Form 2</h2>
 
   <label>Name:</label>
   <input type="text" id="name" />
@@ -26,42 +25,48 @@
   </select>
 
   <button onclick="startScanner()">Start Scanner</button>
-  <div id="reader" style="display:none;"></div>
+  <video id="preview" autoplay></video>
 
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <script>
-    const html5QrCode = new Html5Qrcode("reader");
+    const video = document.getElementById("preview");
+    let stream;
 
-    function startScanner() {
-      document.getElementById("reader").style.display = "block";
+    async function startScanner() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        video.srcObject = stream;
 
-      Html5Qrcode.getCameras().then(devices => {
-        if (devices && devices.length) {
-          const cameraId = devices[0].id;
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
 
-          html5QrCode.start(
-            cameraId,
-            { fps: 10, qrbox: 250 },
-            decodedText => {
+        function tick() {
+          if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+            if (code) {
               try {
-                const data = JSON.parse(decodedText);
-                document.getElementById("name").value = data.name || "";
-                document.getElementById("season").value = data.season || "";
+                const data = JSON.parse(code.data);
+                if (data.name) document.getElementById("name").value = data.name;
+                if (data.season) document.getElementById("season").value = data.season;
 
-                html5QrCode.stop().then(() => {
-                  document.getElementById("reader").style.display = "none";
-                });
+                stream.getTracks().forEach(track => track.stop());
               } catch (err) {
-                alert("QR code doesn't contain valid JSON.");
+                alert("Invalid QR Code data.");
               }
-            },
-            errorMessage => {
-              // silently ignore scan errors
+              return;
             }
-          );
+          }
+          requestAnimationFrame(tick);
         }
-      }).catch(err => {
-        alert("Camera access failed: " + err);
-      });
+        tick();
+      } catch (err) {
+        alert("Camera access failed: " + err.message);
+      }
     }
   </script>
 </body>
