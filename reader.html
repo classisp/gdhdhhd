@@ -1,37 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>QR Code Scanner - Autofill Form</title>
+  <meta charset="UTF-8">
+  <title>QR Scanner</title>
   <script src="https://unpkg.com/html5-qrcode@2.3.10/minified/html5-qrcode.min.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 30px;
-    }
-    input, select {
-      margin-bottom: 10px;
-      padding: 8px;
-      width: 200px;
-      display: block;
-    }
-    #scanner-container {
-      margin-top: 20px;
-      display: none;
-    }
-    button {
-      padding: 10px 15px;
-      font-size: 16px;
-    }
+    body { font-family: sans-serif; padding: 20px; }
+    #reader { width: 300px; margin-top: 20px; }
+    input, select { display: block; margin: 10px 0; padding: 8px; width: 200px; }
   </style>
 </head>
 <body>
-  <h2>QR Code Scanner</h2>
+  <h2>QR Scanner Autofill</h2>
 
-  <label for="name">Name:</label>
-  <input type="text" id="name">
+  <label>Name:</label>
+  <input type="text" id="name" />
 
-  <label for="season">Season:</label>
+  <label>Season:</label>
   <select id="season">
     <option value="">Select Season</option>
     <option value="Spring">Spring</option>
@@ -40,39 +25,44 @@
     <option value="Winter">Winter</option>
   </select>
 
-  <button id="startBtn">Start Scanner</button>
-
-  <div id="scanner-container">
-    <div id="reader" style="width: 300px;"></div>
-  </div>
+  <button onclick="startScanner()">Start Scanner</button>
+  <div id="reader" style="display:none;"></div>
 
   <script>
-    let scanner;
+    const html5QrCode = new Html5Qrcode("reader");
 
-    document.getElementById("startBtn").addEventListener("click", () => {
-      document.getElementById("scanner-container").style.display = "block";
+    function startScanner() {
+      document.getElementById("reader").style.display = "block";
 
-      if (scanner) return; // prevent reinit
+      Html5Qrcode.getCameras().then(devices => {
+        if (devices && devices.length) {
+          const cameraId = devices[0].id;
 
-      scanner = new Html5QrcodeScanner("reader", {
-        fps: 10,
-        qrbox: 250
-      });
+          html5QrCode.start(
+            cameraId,
+            { fps: 10, qrbox: 250 },
+            decodedText => {
+              try {
+                const data = JSON.parse(decodedText);
+                document.getElementById("name").value = data.name || "";
+                document.getElementById("season").value = data.season || "";
 
-      scanner.render((decodedText) => {
-        try {
-          const data = JSON.parse(decodedText);
-          if (data.name) document.getElementById("name").value = data.name;
-          if (data.season) document.getElementById("season").value = data.season;
-          
-          scanner.clear().then(() => {
-            document.getElementById("scanner-container").style.display = "none";
-          });
-        } catch (e) {
-          alert("Invalid QR Code");
+                html5QrCode.stop().then(() => {
+                  document.getElementById("reader").style.display = "none";
+                });
+              } catch (err) {
+                alert("QR code doesn't contain valid JSON.");
+              }
+            },
+            errorMessage => {
+              // silently ignore scan errors
+            }
+          );
         }
+      }).catch(err => {
+        alert("Camera access failed: " + err);
       });
-    });
+    }
   </script>
 </body>
 </html>
