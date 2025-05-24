@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>QR Code Form Autofill</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.10/minified/html5-qrcode.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 30px;
+    }
+    input, select {
+      margin-bottom: 10px;
+      padding: 8px;
+      width: 200px;
+      display: block;
+    }
+    #scanner-container {
+      margin-top: 20px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h2>QR Code Scanner to Auto-Fill Form</h2>
+
+  <label for="name">Name:</label>
+  <input type="text" id="name">
+
+  <label for="season">Season:</label>
+  <select id="season">
+    <option value="">Select Season</option>
+    <option value="Spring">Spring</option>
+    <option value="Summer">Summer</option>
+    <option value="Autumn">Autumn</option>
+    <option value="Winter">Winter</option>
+  </select>
+
+  <button id="startBtn">Start Scanner</button>
+
+  <div id="scanner-container">
+    <div id="reader" style="width: 300px;"></div>
+  </div>
+
+  <script>
+    let scanner;
+
+    document.getElementById("startBtn").addEventListener("click", () => {
+      document.getElementById("scanner-container").style.display = "block";
+
+      if (scanner) return; // don't reinitialize
+
+      scanner = new Html5QrcodeScanner(
+        "reader",
+        { fps: 10, qrbox: 250 },
+        /* verbose= */ false
+      );
+
+      scanner.render(
+        (decodedText, decodedResult) => {
+          try {
+            const data = JSON.parse(decodedText);
+            if (data.name) document.getElementById("name").value = data.name;
+            if (data.season) document.getElementById("season").value = data.season;
+
+            scanner.clear().then(() => {
+              document.getElementById("scanner-container").style.display = "none";
+            }).catch((err) => console.error("Scanner clear error:", err));
+          } catch (e) {
+            console.error("Invalid QR data:", e);
+          }
+        },
+        (error) => {
+          // Silent scan errors
+        }
+      );
+    });
+  </script>
+</body>
+</html>
