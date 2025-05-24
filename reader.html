@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>QR Code Form Autofill</title>
+  <meta charset="UTF-8" />
+  <title>QR Code Scanner - Autofill Form</title>
   <script src="https://unpkg.com/html5-qrcode@2.3.10/minified/html5-qrcode.min.js"></script>
   <style>
     body {
@@ -19,10 +19,14 @@
       margin-top: 20px;
       display: none;
     }
+    button {
+      padding: 10px 15px;
+      font-size: 16px;
+    }
   </style>
 </head>
 <body>
-  <h2>QR Code Scanner to Auto-Fill Form</h2>
+  <h2>QR Code Scanner</h2>
 
   <label for="name">Name:</label>
   <input type="text" id="name">
@@ -48,32 +52,26 @@
     document.getElementById("startBtn").addEventListener("click", () => {
       document.getElementById("scanner-container").style.display = "block";
 
-      if (scanner) return; // don't reinitialize
+      if (scanner) return; // prevent reinit
 
-      scanner = new Html5QrcodeScanner(
-        "reader",
-        { fps: 10, qrbox: 250 },
-        /* verbose= */ false
-      );
+      scanner = new Html5QrcodeScanner("reader", {
+        fps: 10,
+        qrbox: 250
+      });
 
-      scanner.render(
-        (decodedText, decodedResult) => {
-          try {
-            const data = JSON.parse(decodedText);
-            if (data.name) document.getElementById("name").value = data.name;
-            if (data.season) document.getElementById("season").value = data.season;
-
-            scanner.clear().then(() => {
-              document.getElementById("scanner-container").style.display = "none";
-            }).catch((err) => console.error("Scanner clear error:", err));
-          } catch (e) {
-            console.error("Invalid QR data:", e);
-          }
-        },
-        (error) => {
-          // Silent scan errors
+      scanner.render((decodedText) => {
+        try {
+          const data = JSON.parse(decodedText);
+          if (data.name) document.getElementById("name").value = data.name;
+          if (data.season) document.getElementById("season").value = data.season;
+          
+          scanner.clear().then(() => {
+            document.getElementById("scanner-container").style.display = "none";
+          });
+        } catch (e) {
+          alert("Invalid QR Code");
         }
-      );
+      });
     });
   </script>
 </body>
